@@ -1,4 +1,9 @@
-﻿param ([string] $slnPath)
+﻿param (
+    [string] $SlnPath,
+    [string] $CppFileRegex = "Processors?\.cpp|Translator\.cpp",
+    [string] $CppFileRegexToIgnore = "(Houdini|Traffic|Debug|Initializer|Destructor|SmartObject)",
+    [string] $ProcessorNameRegexToIgnore = "(Initializer|Destructor|Debug)"
+)
 
 $global:fragmentIndices = @{}
 $global:lastFragmentIndex = 0
@@ -165,7 +170,4 @@ function GetProcessorsCsvFromSln([string]$slnPath, [string]$cppFileRegex, [strin
     return ConvertProcessorsToCsv $allProcessors
 }
 
-$cppFileRegex = "Processors?\.cpp|Translator\.cpp"
-$cppFileRegexToIgnore = "(Houdini|Traffic|Debug|Initializer|Destructor|SmartObject)"
-$processorNameRegexToIgnore = "(Initializer|Destructor|UMassMoveToTargetProcessor|Debug)"
-GetProcessorsCsvFromSln $slnPath $cppFileRegex $cppFileRegexToIgnore $processorNameRegexToIgnore
+GetProcessorsCsvFromSln $SlnPath $CppFileRegex $CppFileRegexToIgnore $ProcessorNameRegexToIgnore

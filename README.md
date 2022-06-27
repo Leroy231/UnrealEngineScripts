@@ -8,21 +8,21 @@ This script is useful for large UE5 projects that use the [MassEntity framework]
 ## Example Usage
 Example usage to copy CSV output to clipboard (make sure to use a valid path to .sln file):
 ```
-MassEntityProcessorsAndFragmentsToCsv.ps1 -slnPath D:\UE5\CitySample\CitySample.sln | Set-Clipboard
+MassEntityProcessorsAndFragmentsToCsv.ps1 -SlnPath D:\UE5\CitySample\CitySample.sln | Set-Clipboard
 ```
 
 ## Example Output
 
 CSV in Google Sheets: https://docs.google.com/spreadsheets/d/1cV5LdfMd-Jj0PdczKeZLYpwrhCdmPPfa8gGXU_T9oQE/edit?usp=sharing
 
-## Script Tweaks
+## Parameters
 
-There are several hard-coded parameters that can be tweaked at the bottom of the script:
-- cppFileRegex: A regex for which .cpp files to search for Mass Processor definitions
-- cppFileRegexToIgnore: A regex for files to ignore
-- processorNameRegexToIgnore: A regex for Processor class names to ignore
+There are several optional parameters to the script:
+- `-CppFileRegex`: A regex for which .cpp files to search for Mass Processor definitions
+- `-CppFileRegexToIgnore`: A regex for files to ignore
+- `-ProcessorNameRegexToIgnore`: A regex for Processor class names to ignore
 
-Ideally these will be optional script parameters someday.
+For default values see the top of the script.
 
 ## Access Modifier Abbreviations
 
