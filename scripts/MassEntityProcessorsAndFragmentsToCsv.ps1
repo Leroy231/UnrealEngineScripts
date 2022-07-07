@@ -1,6 +1,6 @@
 ﻿param (
     [string] $SlnPath,
-    [string] $CppFileRegex = "Processors?\.cpp|Translator\.cpp|Trait\.cpp",
+    [string] $CppFileRegex = "Processors?\.cpp|Translator\.cpp|Trait\.cpp|Fragment\.cpp",
     [string] $CppFileRegexToIgnore = "(Houdini|Traffic|Debug|Initializer|Destructor|SmartObject)",
     [string] $ProcessorNameRegexToIgnore = "(Initializer|Destructor|Debug)"
 )
