@@ -16,6 +16,7 @@ $global:accessTypesToShortNames = @{
     "EMassFragmentPresence::None" = ""
 }
 $global:processorsToProjects = @{}
+$global:processorsToSuperclasses = @{}
 
 function GetCompiledFiles([string]$VcxProjPath, [string]$Regex, [string]$RegexToIgnore)
 {
@@ -74,6 +75,8 @@ function GetProcessorsForCppFile([string]$FilePath, [string]$processorNameRegexT
         $processorFragments = @{}
         $processorsToFragments.Add($processorName, $processorFragments)
         $global:processorsToProjects.Add($processorName, $vcxProject)
+        $superclass = GetProcessorSuperclass $processorName $FilePath
+        $global:processorsToSuperclasses.Add($processorName, $superclass)
         $requirements = $configureQueriesMatch.Value | Select-String 'AddRequirement<(.+)>\((.+)\)' -AllMatches|%{$_.Matches}
         foreach ($req in $requirements)
         {
@@ -110,6 +113,24 @@ function GetProcessorsForCppFile([string]$FilePath, [string]$processorNameRegexT
     return $processorsToFragments
 }
 
+function GetProcessorSuperclass([string]$processorName, [string]$FilePath)
+{
+    $headerPath = $FilePath.replace('.cpp','.h').replace('Private', 'Public')
+    if (-not (Test-Path $headerPath -PathType Leaf)) {
+        $headerPathSplit = $headerPath -split '\\'
+        $headerFile = $headerPathSplit[-1]
+        $lengthOfSource = 6
+        $searchPath = $headerPath.Substring(0, $headerPath.IndexOf("Source")+$lengthOfSource)
+        $headerPathInSearchPath = Get-ChildItem -Path $searchPath -Recurse -filter $headerFile -name
+        $headerPath = Join-Path -Path $searchPath -ChildPath $headerPathInSearchPath
+    }
+    $superclass = Select-String -Path $headerPath -Pattern "$processorName : public (\w+)" | %{$_.Matches} |  %{$_.Groups[1]} | %{$_.Value}
+    if ($superclass -eq "UMassProcessor") {
+        return ""
+    }
+    return $superclass
+}
+
 function GetVcxProjectsFromSln([string]$slnPath)
 {
     $slnDir = Split-Path -Path $slnPath -Parent
@@ -141,24 +162,26 @@ function ConvertProcessorsToCsv($processors)
         $fragmentNames[$fragmentIndex] = $fragmentName
     }
     $fragmentNamesLine = $fragmentNames -join ","
-    $fragmentNamesLine = "Project,Processor," + $fragmentNamesLine
+    $fragmentNamesLine = "Project,Processor,Superclass," + $fragmentNamesLine
     write-output $fragmentNamesLine
 
     foreach ($processorsInFile in $processors)
     {
         foreach ($processorNameAndFragments in $processorsInFile.GetEnumerator())
         {
-            $row = [string[]]::new($global:fragmentIndices.Count+2)
+            $fixedColumnCount = 3
+            $row = [string[]]::new($global:fragmentIndices.Count+$fixedColumnCount)
             $processorName = $processorNameAndFragments.Name
             $row[0] = GetProjectNameFromVxcPath $global:processorsToProjects[$processorName]
             $row[1] = $processorName
+            $row[2] = $global:processorsToSuperclasses[$processorName]
             $fragmentNamesToAccess = $processorNameAndFragments.Value
             foreach ($fragmentNameAndIndex in $global:fragmentIndices.GetEnumerator())
             {
                 $fragmentName = $fragmentNameAndIndex.Name
                 $fragmentIndex = $fragmentNameAndIndex.Value
                 $access = $fragmentNamesToAccess[$fragmentName]
-                $row[$fragmentIndex+2] = $access
+                $row[$fragmentIndex+$fixedColumnCount] = $access
             }
 
             $rowString = $row -join ","
