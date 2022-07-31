@@ -15,6 +15,7 @@ $global:accessTypesToShortNames = @{
     "EMassFragmentPresence::All" = ""
     "EMassFragmentPresence::None" = ""
 }
+$global:processorsToProjects = @{}
 
 function GetCompiledFiles([string]$VcxProjPath, [string]$Regex, [string]$RegexToIgnore)
 {
@@ -56,11 +57,11 @@ function StringWithoutDuplicateChars([string]$string)
     return $result
 }
 
-function GetProcessorsForCppFile([string]$FilePath, [string]$processorNameRegexToIgnore)
+function GetProcessorsForCppFile([string]$FilePath, [string]$processorNameRegexToIgnore, [string]$vcxProject)
 {
     $processorsToFragments = @{}
 
-    $configureQueriesMatches = Get-Content $FilePath -Raw | Select-String '(?smi) (\w+?)::ConfigureQueries.+?\}' -AllMatches |%{$_.Matches}
+    $configureQueriesMatches = Get-Content $FilePath -Raw | Select-String '(?smi) (\w+?)::ConfigureQueries\(.+?\}' -AllMatches |%{$_.Matches}
 
     foreach ($configureQueriesMatch in $configureQueriesMatches)
     {
@@ -72,6 +73,7 @@ function GetProcessorsForCppFile([string]$FilePath, [string]$processorNameRegexT
 
         $processorFragments = @{}
         $processorsToFragments.Add($processorName, $processorFragments)
+        $global:processorsToProjects.Add($processorName, $vcxProject)
         $requirements = $configureQueriesMatch.Value | Select-String 'AddRequirement<(.+)>\((.+)\)' -AllMatches|%{$_.Matches}
         foreach ($req in $requirements)
         {
@@ -123,7 +125,7 @@ function GetProcessorsForSln([string]$slnPath, [string]$cppFileRegex, [string]$c
         $files = GetCompiledFiles $vcxProject $cppFileRegex $cppFileRegexToIgnore
         foreach($file in $files)
         {
-            $processors += GetProcessorsForCppFile $file $processorNameRegexToIgnore
+            $processors += GetProcessorsForCppFile $file $processorNameRegexToIgnore $vcxProject
         }
     }
     return $processors
@@ -139,29 +141,35 @@ function ConvertProcessorsToCsv($processors)
         $fragmentNames[$fragmentIndex] = $fragmentName
     }
     $fragmentNamesLine = $fragmentNames -join ","
-    $fragmentNamesLine = "Processor," + $fragmentNamesLine
+    $fragmentNamesLine = "Project,Processor," + $fragmentNamesLine
     write-output $fragmentNamesLine
 
     foreach ($processorsInFile in $processors)
     {
         foreach ($processorNameAndFragments in $processorsInFile.GetEnumerator())
         {
-            $row = [string[]]::new($global:fragmentIndices.Count+1)
+            $row = [string[]]::new($global:fragmentIndices.Count+2)
             $processorName = $processorNameAndFragments.Name
-            $row[0] = $processorName
+            $row[0] = GetProjectNameFromVxcPath $global:processorsToProjects[$processorName]
+            $row[1] = $processorName
             $fragmentNamesToAccess = $processorNameAndFragments.Value
             foreach ($fragmentNameAndIndex in $global:fragmentIndices.GetEnumerator())
             {
                 $fragmentName = $fragmentNameAndIndex.Name
                 $fragmentIndex = $fragmentNameAndIndex.Value
                 $access = $fragmentNamesToAccess[$fragmentName]
-                $row[$fragmentIndex+1] = $access
+                $row[$fragmentIndex+2] = $access
             }
 
             $rowString = $row -join ","
             write-output $rowString
         }
     }
+}
+
+function GetProjectNameFromVxcPath([string]$vcxPath)
+{
+    return echo $vcxPath | Select-String -Pattern '.+?(\w+)\.vcxproj' | %{$_.Matches} | %{$_.Groups[1]} | %{$_.Value}
 }
 
 function GetProcessorsCsvFromSln([string]$slnPath, [string]$cppFileRegex, [string]$cppFileRegexToIgnore, [string]$processorNameRegexToIgnore)
