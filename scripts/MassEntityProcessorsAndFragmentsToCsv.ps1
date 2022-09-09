@@ -1,8 +1,8 @@
 ﻿param (
     [string] $SlnPath,
     [string] $CppFileRegex = "Processors?\.cpp|Translator\.cpp|Trait\.cpp|Fragment\.cpp",
-    [string] $CppFileRegexToIgnore = "(Houdini|Traffic|Debug|Initializer|Destructor)",
-    [string] $ProcessorNameRegexToIgnore = "(Initializer|Destructor|Debug)"
+    [string] $CppFileRegexToIgnore = "(Houdini|Debug)",
+    [string] $ProcessorNameRegexToIgnore = "(Debug)"
 )
 
 $global:fragmentIndices = @{}
